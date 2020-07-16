@@ -25,7 +25,6 @@ function Submit-Log {
         Submit-Log -Text "Exception.GetType() [$($ErrorRecord.Exception.GetType())]"
         Submit-Log -Text "Exception.InnerException.Message [$($ErrorRecord.Exception.InnerException.Message)]"
     }
-
 }
 
 <#
@@ -34,11 +33,12 @@ netUserProperty_with_expectedvalue is a hashtable to store the netuser propertie
 $netUserProperty_with_expectedvalue = @{'Account active' = 'Yes'
                             'Password expires' = 'Never'
                             'User may change password' = 'Yes'
+                            # 'User may change password' = 'No'
 }
 <#
 currentFolderPath - Name of the path where the executable reside relative to path of the console.
 #>
-$currentFolderPath = Split-Path $script:MyInvocation.MyCommand.Path 
+$currentFolderPath = Split-Path $script:MyInvocation.MyCommand.Path
 $currentFolderPath += '\'
 <#
 compname - Current local computer name where the script is executed.
@@ -56,7 +56,16 @@ We iterate through the hashtable and find the key in the netuserobject and futhe
 This is then logged in to the verbose stream and log file.
 #>
 foreach ($key in $netUserProperty_with_expectedvalue.Keys) {
-    if ( $netuserobject | findstr /c:"$($key)" | findstr /c:"$($netUserProperty_with_expectedvalue.$key)") {
-        Write-Verbose "$($key) - $($netUserProperty_with_expectedvalue.$key)" -Verbose
+    if ( $netuserobject | findstr /c:"$($key)") {
+        if ($netuserobject | findstr /c:"$($key)" | findstr /c:"$($netUserProperty_with_expectedvalue.$key)") {
+            Submit-Log -text "$($key) - $($netUserProperty_with_expectedvalue.$key) is the EXPECTED VALUE" -Verbose
+        }
+        else {
+            $netuserobject_indexvalue = $netuserobject | findstr /c:"$($key)"
+            $netuserobject_indexvalue = $netuserobject_indexvalue -split "\s\s"
+            Submit-Log -text "$($key) - $($netuserobject_indexvalue[-1]) is NOT THE EXPECTED VALUE" -Verbose
+        }
     }
 }
+Submit-Log -text "Iteration through the fixed hash map has ended."
+Submit-Log -text "End of program"
