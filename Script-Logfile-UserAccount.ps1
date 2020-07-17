@@ -33,7 +33,6 @@ netUserProperty_with_expectedvalue is a hashtable to store the netuser propertie
 $netUserProperty_with_expectedvalue = @{'Account active' = 'Yes'
                             'Password expires' = 'Never'
                             'User may change password' = 'Yes'
-                            # 'User may change password' = 'No'
 }
 <#
 currentFolderPath - Name of the path where the executable reside relative to path of the console.
@@ -56,15 +55,20 @@ We iterate through the hashtable and find the key in the netuserobject and futhe
 This is then logged in to the verbose stream and log file.
 #>
 foreach ($key in $netUserProperty_with_expectedvalue.Keys) {
-    if ( $netuserobject | findstr /c:"$($key)") {
-        if ($netuserobject | findstr /c:"$($key)" | findstr /c:"$($netUserProperty_with_expectedvalue.$key)") {
-            Submit-Log -text "$($key) - $($netUserProperty_with_expectedvalue.$key) is the EXPECTED VALUE" -Verbose
+    try {
+        if ( $netuserobject | findstr /c:"$($key)") {
+            if ($netuserobject | findstr /c:"$($key)" | findstr /c:"$($netUserProperty_with_expectedvalue.$key)") {
+                Submit-Log -text "$($key) - $($netUserProperty_with_expectedvalue.$key) is the EXPECTED VALUE" -Verbose
+            }
+            else {
+                $netuserobject_indexvalue = $netuserobject | findstr /c:"$($key)"
+                $netuserobject_indexvalue = $netuserobject_indexvalue -split "\s\s"
+                Submit-Log -text "$($key) - $($netuserobject_indexvalue[-1]) is NOT THE EXPECTED VALUE" -Verbose
+            }
         }
-        else {
-            $netuserobject_indexvalue = $netuserobject | findstr /c:"$($key)"
-            $netuserobject_indexvalue = $netuserobject_indexvalue -split "\s\s"
-            Submit-Log -text "$($key) - $($netuserobject_indexvalue[-1]) is NOT THE EXPECTED VALUE" -Verbose
-        }
+    }
+    catch {
+        Submit-Log -text "Error inside the iteration of hash map netUserProperty_with_expectedvalue" -errorRecord $_
     }
 }
 Submit-Log -text "Iteration through the fixed hash map has ended."
