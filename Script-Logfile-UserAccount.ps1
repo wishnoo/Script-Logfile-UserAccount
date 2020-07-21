@@ -1,8 +1,7 @@
-Submit-Log -text "Start of program"
 
 param (
     [Parameter()]
-    [string[]]$AccountName
+    [string[]] $AccountName=@()
 )
 
 function LogFileName {
@@ -56,10 +55,10 @@ function Submit-Log {
     )
 
     # logFilePath needs to be assigned beforehand
-    if ((-not $logFilePath)) {
-        $logFilePath = LogFileName -errorFilePath
-        $text = "Log File Path is empty"
-    }
+    # if ((-not $logFilePath)) {
+    #     $logFilePath = LogFileName -errorFilePath
+    #     $text = "Log File Path is empty"
+    # }
 
     # Prepend time with text using get-date and .tostring method
     $Entry = (Get-Date).ToString( 'M/d/yyyy HH:mm:ss - ' ) + $text
@@ -94,11 +93,15 @@ function ParameterValidation {
 $fileNamePrefix = "UserAccount"
 $logFilePath = LogFileName -requireComputerName -fileNamePrefix $fileNamePrefix
 
+if (-not $logFilePath) {
+    $logFilePath = $logFilePath = LogFileName -errorFilePath
+    Submit-Log -text "Log File Path is empty"
+    exit
+}
+
+Submit-Log -text "Start of program"
+
 ParameterValidation $AccountName
-
-
-# $netuserobject = net user stealth
-$netuserobject = net user $AccountName
 
 <#
 netUserProperty_with_expectedvalue is a hashtable to store the netuser properties that need to be verified as the key and desired values as the values in the hashtable.
@@ -109,7 +112,10 @@ $netUserProperty_with_expectedvalue = @{'Account active' = 'Yes'
 }
 
 
-Submit-Log -text "Iteration through the fixed hash map started."
+# $netuserobject = net user stealth
+$netuserobject = net user $AccountName
+
+$successFlag = $true
 <#
 We iterate through the hashtable and find the key in the netuserobject and futher find the expected value.
 This is then logged in to the verbose stream and log file.
@@ -124,6 +130,7 @@ foreach ($key in $netUserProperty_with_expectedvalue.Keys) {
                 $netuserobject_indexvalue = $netuserobject | findstr /c:"$($key)"
                 $netuserobject_indexvalue = $netuserobject_indexvalue -split "\s\s"
                 Submit-Log -text "$($key) - $($netuserobject_indexvalue[-1]) is NOT THE EXPECTED VALUE" -Verbose
+                $successFlag = $false
             }
         }
     }
@@ -131,5 +138,10 @@ foreach ($key in $netUserProperty_with_expectedvalue.Keys) {
         Submit-Log -text "Error inside the iteration of hash map netUserProperty_with_expectedvalue" -errorRecord $_
     }
 }
+
+# if (-not $successFlag) {
+#     Rename-Item -Path "$($logFilePath)" -NewName $filename_failure
+# }
+
 Submit-Log -text "Iteration through the fixed hash map has ended."
 Submit-Log -text "End of program"
