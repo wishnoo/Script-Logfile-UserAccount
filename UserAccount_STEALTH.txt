@@ -1,7 +1,0 @@
-﻿7/16/2020 16:02:41 - Start of program
-7/16/2020 16:02:41 - Iteration through the fixed hash map started.
-7/16/2020 16:02:41 - Account active - Yes is the EXPECTED VALUE
-7/16/2020 16:02:41 - Password expires - Never is the EXPECTED VALUE
-7/16/2020 16:02:41 - User may change password - Yes is the EXPECTED VALUE
-7/16/2020 16:02:41 - Iteration through the fixed hash map has ended.
-7/16/2020 16:02:41 - End of program
