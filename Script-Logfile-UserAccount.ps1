@@ -31,7 +31,7 @@ function LogFileName {
             return $logFilePath
         }
         elseif (($logFileNamePrefix)) {
-            $outputFilename = "$($fileNamePrefix)_($compName)_ERROR.txt"
+            $outputFilename = "$($logFileNamePrefix)_$($compName)_ERROR.txt"
             $logFilePath = $currentFolderPath + $outputFilename
             return $logFilePath
         }
@@ -48,7 +48,7 @@ function LogFileName {
             return $logFilePath
         }
         elseif (($logFileNamePrefix)) {
-            $outputFilename = "$($fileNamePrefix)_($compName)_SUCCESS.txt"
+            $outputFilename = "$($logFileNamePrefix)_$($compName)_SUCCESS.txt"
             $logFilePath = $currentFolderPath + $outputFilename
             return $logFilePath
         }
@@ -65,7 +65,7 @@ function LogFileName {
             return $logFilePath
         }
         elseif (($logFileNamePrefix)) {
-            $outputFilename = "$($fileNamePrefix)_($compName)_ERROR.txt"
+            $outputFilename = "$($logFileNamePrefix)_$($compName)_ERROR.txt"
             $logFilePath = $currentFolderPath + $outputFilename
             return $logFilePath
         }
@@ -81,7 +81,7 @@ function LogFileName {
             return $logFilePath
         }
         elseif (($logFileNamePrefix)) {
-            $outputFilename = "$($fileNamePrefix)_($compName)_SUCCESS.txt"
+            $outputFilename = "$($logFileNamePrefix)_$($compName)_SUCCESS.txt"
             $logFilePath = $currentFolderPath + $outputFilename
             return $logFilePath
         }
@@ -96,7 +96,7 @@ function LogFileName {
             return $logFilePath
     }
     elseif (($logFileNamePrefix)) {
-        $outputFilename = "$($fileNamePrefix)_($compName).txt"
+        $outputFilename = "$($logFileNamePrefix)_$($compName).txt"
         $logFilePath = $currentFolderPath + $outputFilename
         return $logFilePath
     }
@@ -152,7 +152,7 @@ function ParameterValidation {
     }
 }
 
-# $fileNamePrefix = "UserAccount"
+Write-Verbose "File Name Prefix: $($logFileNamePrefix)" -Verbose
 $logFilePath = LogFileName
 Write-Verbose "Prevalidated Log File Path: $($logFilePath)" -verbose
 
@@ -164,6 +164,7 @@ if (-not $logFilePath) {
 
 Submit-Log -text "Start of program"
 
+
 ParameterValidation $AccountName
 
 <#
@@ -174,6 +175,10 @@ $netUserProperty_with_expectedvalue = @{'Account active' = 'Yes'
                             'User may change password' = 'Yes'
 }
 
+<#
+Output Array with the resulting values from netuser and status {EXPECTED,NOT EXPECTED}
+#>
+$netUserProperty_with_currentvalue_array = @()
 
 # $netuserobject = net user stealth
 $netuserobject = net user $AccountName
@@ -183,16 +188,29 @@ $successFlag = $true
 We iterate through the hashtable and find the key in the netuserobject and futher find the expected value.
 This is then logged in to the verbose stream and log file.
 #>
+Submit-Log -text "------------------------  OUTPUT  -------------------------------"
 foreach ($key in $netUserProperty_with_expectedvalue.Keys) {
+    $netUserProperty_with_currentvalue = [PSCustomObject]@{}
     try {
         if ( $netuserobject | findstr /c:"$($key)") {
             if ($netuserobject | findstr /c:"$($key)" | findstr /c:"$($netUserProperty_with_expectedvalue.$key)") {
-                Submit-Log -text "$($key) - $($netUserProperty_with_expectedvalue.$key) is the EXPECTED VALUE" -Verbose
+                $netUserProperty_with_currentvalue = [PSCustomObject]@{
+                    "Property" = $key
+                    "Value" = $netUserProperty_with_expectedvalue.$key
+                    "Expected Value" = $netUserProperty_with_expectedvalue.$key
+                }
+                $netUserProperty_with_currentvalue_array += $netUserProperty_with_currentvalue
             }
             else {
                 $netuserobject_indexvalue = $netuserobject | findstr /c:"$($key)"
                 $netuserobject_indexvalue = $netuserobject_indexvalue -split "\s\s"
-                Submit-Log -text "$($key) - $($netuserobject_indexvalue[-1]) is NOT THE EXPECTED VALUE" -Verbose
+                $netUserProperty_with_currentvalue = [PSCustomObject]@{
+                    "Property" = $key
+                    "Value" = $netuserobject_indexvalue[-1]
+                    "Expected Value" = $netUserProperty_with_expectedvalue.$key
+                }
+                $netUserProperty_with_currentvalue_array += $netUserProperty_with_currentvalue
+                # Submit-Log -text "$($key)`t`t`t - $($netuserobject_indexvalue[-1])`t`t is NOT THE EXPECTED VALUE" -Verbose
                 $successFlag = $false
             }
         }
@@ -202,6 +220,10 @@ foreach ($key in $netUserProperty_with_expectedvalue.Keys) {
     }
 }
 
+Submit-Log -text "`n `n $($netUserProperty_with_currentvalue_array | Out-String)"
+Submit-Log -text "-------------------------------------------------------------------"
+Submit-Log -text "Iteration through the fixed hash map has ended."
+
 if (-not $successFlag) {
     Submit-Log -text "Success Flag Failed"
     $fileName = logFileName  -errorFileName
@@ -210,12 +232,11 @@ if (-not $successFlag) {
     Submit-Log -text "New LogFilePath : $($logFilePath)"
 }
 else {
-    Submit-Log -text "Success Failed Remain true"
+    Submit-Log -text "Success Flag True"
     $fileName = logFileName -successFileName
     Rename-Item -Path "$($logFilePath)" -NewName "$($fileName)" -Force
     $logFilePath = LogFileName -successFilePath
     Submit-Log -text "New LogFilePath : $($logFilePath)"
 }
 
-Submit-Log -text "Iteration through the fixed hash map has ended."
 Submit-Log -text "End of program"
