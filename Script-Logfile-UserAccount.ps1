@@ -1,16 +1,17 @@
 
 param (
-    [Parameter()]
-    [string[]] $AccountName=@()
+    [string[]] $AccountName=@(),
+    [string] $logFileNamePrefix=""
 )
 
 function LogFileName {
     [cmdletbinding()]
     param (
-        [switch] $requireComputerName,
-        [string] $fileNamePrefix,
+        # [string] $fileNamePrefix,
         [switch] $errorFilePath,
-        [switch] $successFilePath
+        [switch] $successFilePath,
+        [switch] $successFileName,
+        [switch] $errorFileName
     )
     Write-Verbose "LogFileName function started" -Verbose
     <#
@@ -23,18 +24,79 @@ function LogFileName {
     #>
     $compName = $env:COMPUTERNAME
 
-    if (($requireComputerName) -and ($fileNamePrefix) ) {
-        $outputFilename = "$($fileNamePrefix)_$($compName).txt"
-        $logFilePath = $currentFolderPath + $outputFilename
-        return $logFilePath
+    if ($errorFilePath) {
+        if ((-not $logFileNamePrefix)) {
+            $outputFilename = "$($compName)_ERROR.txt"
+            $logFilePath = $currentFolderPath + $outputFilename
+            return $logFilePath
+        }
+        elseif (($logFileNamePrefix)) {
+            $outputFilename = "$($fileNamePrefix)_($compName)_ERROR.txt"
+            $logFilePath = $currentFolderPath + $outputFilename
+            return $logFilePath
+        }
+        else {
+            $outputFilename = "ERROR.txt"
+            $logFilePath = $currentFolderPath + $outputFilename
+            return $logFilePath
+        }
     }
-    elseif ((-Not $requireComputerName) -and ($fileNamePrefix)) {
-        $outputFilename = "$($fileNamePrefix).txt"
-        $logFilePath = $currentFolderPath + $outputFilename
-        return $logFilePath
+    elseif ($successFilePath) {
+        if ((-not $logFileNamePrefix)) {
+            $outputFilename = "$($compName)_SUCCESS.txt"
+            $logFilePath = $currentFolderPath + $outputFilename
+            return $logFilePath
+        }
+        elseif (($logFileNamePrefix)) {
+            $outputFilename = "$($fileNamePrefix)_($compName)_SUCCESS.txt"
+            $logFilePath = $currentFolderPath + $outputFilename
+            return $logFilePath
+        }
+        else {
+            $outputFilename = "SUCCESS.txt"
+            $logFilePath = $currentFolderPath + $outputFilename
+            return $logFilePath
+        }
     }
-    elseif ($errorFilePath) {
-        $outputFilename = "$($compName)_ERROR.txt"
+    elseif ($errorFileName) {
+        if ((-not $logFileNamePrefix)) {
+            $outputFilename = "$($compName)_ERROR.txt"
+            $logFilePath = $currentFolderPath + $outputFilename
+            return $logFilePath
+        }
+        elseif (($logFileNamePrefix)) {
+            $outputFilename = "$($fileNamePrefix)_($compName)_ERROR.txt"
+            $logFilePath = $currentFolderPath + $outputFilename
+            return $logFilePath
+        }
+        else {
+            $outputFilename = "ERROR.txt"
+            return $outputFilename
+        }
+    }
+    elseif ($successFileName) {
+        if ((-not $logFileNamePrefix)) {
+            $outputFilename = "$($compName)_SUCCESS.txt"
+            $logFilePath = $currentFolderPath + $outputFilename
+            return $logFilePath
+        }
+        elseif (($logFileNamePrefix)) {
+            $outputFilename = "$($fileNamePrefix)_($compName)_SUCCESS.txt"
+            $logFilePath = $currentFolderPath + $outputFilename
+            return $logFilePath
+        }
+        else {
+            $outputFilename = "SUCCESS.txt"
+            return $outputFilename
+        }
+    }
+    elseif ((-not $logFileNamePrefix)) {
+            $outputFilename = "$($compName).txt"
+            $logFilePath = $currentFolderPath + $outputFilename
+            return $logFilePath
+    }
+    elseif (($logFileNamePrefix)) {
+        $outputFilename = "$($fileNamePrefix)_($compName).txt"
         $logFilePath = $currentFolderPath + $outputFilename
         return $logFilePath
     }
@@ -90,8 +152,9 @@ function ParameterValidation {
     }
 }
 
-$fileNamePrefix = "UserAccount"
-$logFilePath = LogFileName -requireComputerName -fileNamePrefix $fileNamePrefix
+# $fileNamePrefix = "UserAccount"
+$logFilePath = LogFileName
+Write-Verbose "Prevalidated Log File Path: $($logFilePath)" -verbose
 
 if (-not $logFilePath) {
     $logFilePath = $logFilePath = LogFileName -errorFilePath
@@ -139,9 +202,20 @@ foreach ($key in $netUserProperty_with_expectedvalue.Keys) {
     }
 }
 
-# if (-not $successFlag) {
-#     Rename-Item -Path "$($logFilePath)" -NewName $filename_failure
-# }
+if (-not $successFlag) {
+    Submit-Log -text "Success Flag Failed"
+    $fileName = logFileName  -errorFileName
+    Rename-Item -Path "$($logFilePath)" -NewName "$($fileName)" -Force
+    $logFilePath = LogFileName  -errorFilePath
+    Submit-Log -text "New LogFilePath : $($logFilePath)"
+}
+else {
+    Submit-Log -text "Success Failed Remain true"
+    $fileName = logFileName -successFileName
+    Rename-Item -Path "$($logFilePath)" -NewName "$($fileName)" -Force
+    $logFilePath = LogFileName -successFilePath
+    Submit-Log -text "New LogFilePath : $($logFilePath)"
+}
 
 Submit-Log -text "Iteration through the fixed hash map has ended."
 Submit-Log -text "End of program"
