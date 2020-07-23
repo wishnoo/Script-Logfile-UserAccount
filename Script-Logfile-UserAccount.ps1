@@ -152,6 +152,11 @@ function ParameterValidation {
     }
 }
 
+<#
+Set all non terminating errors to terminating.
+#>
+$ErrorActionPreference = 'Stop'
+
 Write-Verbose "File Name Prefix: $($logFileNamePrefix)" -Verbose
 $logFilePath = LogFileName
 Write-Verbose "Prevalidated Log File Path: $($logFilePath)" -verbose
@@ -197,7 +202,7 @@ $AccountName | ForEach-Object{
     }
     Submit-Log -text "------------------------  OUTPUT  -------------------------------"
     Submit-Log -text "Account Name : $($_)"
-    Submit-Log -text "----------------------"
+    Submit-Log -text "----------------------------"
     <#
     We iterate through the hashtable and find the key in the netuserobject and futher find the expected value.
     This is then logged in to the verbose stream and log file.
