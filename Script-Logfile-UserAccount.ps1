@@ -115,12 +115,6 @@ function Submit-Log {
         $errorRecord
     )
 
-    # logFilePath needs to be assigned beforehand
-    # if ((-not $logFilePath)) {
-    #     $logFilePath = LogFileName -errorFilePath
-    #     $text = "Log File Path is empty"
-    # }
-
     # Prepend time with text using get-date and .tostring method
     $Entry = (Get-Date).ToString( 'M/d/yyyy HH:mm:ss - ' ) + $text
 
@@ -146,7 +140,11 @@ function ParameterValidation {
        [array] $AccountName
     )
     if (-Not $AccountName) {
-        $logFilePath = $logFilePath = LogFileName -errorFilePath
+        if ($logFilePath) {
+            $fileName = logFileName  -errorFileName
+            Rename-Item -Path "$($logFilePath)" -NewName "$($fileName)" -Force
+        }
+        $logFilePath = LogFileName -errorFilePath
         Submit-Log -text "Account Name Array is Empty"
         exit
     }
@@ -162,7 +160,7 @@ $logFilePath = LogFileName
 Write-Verbose "Prevalidated Log File Path: $($logFilePath)" -verbose
 
 if (-not $logFilePath) {
-    $logFilePath = $logFilePath = LogFileName -errorFilePath
+    $logFilePath = LogFileName -errorFilePath
     Submit-Log -text "Log File Path is empty"
     exit
 }
@@ -193,10 +191,17 @@ $AccountName | ForEach-Object{
     Net user execution with respective account names.
     #>
     try {
-        $netuserobject = net user $_
+        $netuserobject = net user $_ 2>&1
     }
     catch {
-        $logFilePath = $logFilePath = LogFileName -errorFilePath
+        if ($logFilePath) {
+            $fileName = logFileName  -errorFileName
+            Rename-Item -Path "$($logFilePath)" -NewName "$($fileName)" -Force
+        }
+        <#
+        Change the logFilePath even if the logFilePath is empty or not and hence no else statement.
+        #>
+        $logFilePath = LogFileName -errorFilePath
         Submit-Log -text "Error while excecuting net user. Possibly wrong username" -errorRecord $_
         exit
     }
