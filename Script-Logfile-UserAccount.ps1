@@ -145,6 +145,7 @@ function ParameterValidation {
             Rename-Item -Path "$($logFilePath)" -NewName "$($fileName)" -Force
         }
         $logFilePath = LogFileName -errorFilePath
+        Submit-Log -text "New LogFilePath : $($logFilePath)"
         Submit-Log -text "Account Name Array is Empty"
         exit
     }
@@ -162,6 +163,7 @@ Write-Verbose "Prevalidated Log File Path: $($logFilePath)" -verbose
 if (-not $logFilePath) {
     $logFilePath = LogFileName -errorFilePath
     Submit-Log -text "Log File Path is empty"
+    Submit-Log -text "New LogFilePath : $($logFilePath)"
     exit
 }
 
@@ -202,10 +204,11 @@ $AccountName | ForEach-Object{
         Change the logFilePath even if the logFilePath is empty or not and hence no else statement.
         #>
         $logFilePath = LogFileName -errorFilePath
+        Submit-Log -text "New LogFilePath : $($logFilePath)"
         Submit-Log -text "Error while excecuting net user. Possibly wrong username" -errorRecord $_
         exit
     }
-    Submit-Log -text "------------------------  OUTPUT  -------------------------------"
+    Submit-Log -text "------------------------  OUTPUT  $(([array]::indexof($AccountName,$_))+1) -------------------------------"
     Submit-Log -text "Account Name : $($_)"
     Submit-Log -text "----------------------------"
     <#
