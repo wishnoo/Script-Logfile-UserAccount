@@ -1,13 +1,12 @@
 
 param (
-    [string[]] $AccountName=@(),
+    [array] $AccountName=@(),
     [string] $logFileNamePrefix=""
 )
 
 function LogFileName {
     [cmdletbinding()]
     param (
-        # [string] $fileNamePrefix,
         [switch] $errorFilePath,
         [switch] $successFilePath,
         [switch] $successFileName,
@@ -144,9 +143,10 @@ function Submit-Log {
 function ParameterValidation {
     [cmdletbinding()]
     param (
-       [string[]] $AccountName
+       [array] $AccountName
     )
     if (-Not $AccountName) {
+        $logFilePath = $logFilePath = LogFileName -errorFilePath
         Submit-Log -text "Account Name Array is Empty"
         exit
     }
@@ -162,10 +162,11 @@ if (-not $logFilePath) {
     exit
 }
 
-Submit-Log -text "Start of program"
-
+Submit-Log -text "Start of program - LogFilePath initialized"
 
 ParameterValidation $AccountName
+
+Submit-Log -text "AccountName array Not empty"
 
 <#
 netUserProperty_with_expectedvalue is a hashtable to store the netuser properties that need to be verified as the key and desired values as the values in the hashtable.
@@ -175,54 +176,70 @@ $netUserProperty_with_expectedvalue = @{'Account active' = 'Yes'
                             'User may change password' = 'Yes'
 }
 
-<#
-Output Array with the resulting values from netuser and status {EXPECTED,NOT EXPECTED}
-#>
-$netUserProperty_with_currentvalue_array = @()
-
-# $netuserobject = net user stealth
-$netuserobject = net user $AccountName
 
 $successFlag = $true
-<#
-We iterate through the hashtable and find the key in the netuserobject and futher find the expected value.
-This is then logged in to the verbose stream and log file.
-#>
-Submit-Log -text "------------------------  OUTPUT  -------------------------------"
-foreach ($key in $netUserProperty_with_expectedvalue.Keys) {
-    $netUserProperty_with_currentvalue = [PSCustomObject]@{}
+
+$AccountName | ForEach-Object{
+    <#
+    Output Array with the resulting values from netuser and status {EXPECTED,NOT EXPECTED}
+    #>
+    $netUserProperty_with_currentvalue_array = @()
+    <#
+    Net user execution with respective account names.
+    #>
     try {
-        if ( $netuserobject | findstr /c:"$($key)") {
-            if ($netuserobject | findstr /c:"$($key)" | findstr /c:"$($netUserProperty_with_expectedvalue.$key)") {
-                $netUserProperty_with_currentvalue = [PSCustomObject]@{
-                    "Property" = $key
-                    "Value" = $netUserProperty_with_expectedvalue.$key
-                    "Expected Value" = $netUserProperty_with_expectedvalue.$key
-                }
-                $netUserProperty_with_currentvalue_array += $netUserProperty_with_currentvalue
-            }
-            else {
-                $netuserobject_indexvalue = $netuserobject | findstr /c:"$($key)"
-                $netuserobject_indexvalue = $netuserobject_indexvalue -split "\s\s"
-                $netUserProperty_with_currentvalue = [PSCustomObject]@{
-                    "Property" = $key
-                    "Value" = $netuserobject_indexvalue[-1]
-                    "Expected Value" = $netUserProperty_with_expectedvalue.$key
-                }
-                $netUserProperty_with_currentvalue_array += $netUserProperty_with_currentvalue
-                # Submit-Log -text "$($key)`t`t`t - $($netuserobject_indexvalue[-1])`t`t is NOT THE EXPECTED VALUE" -Verbose
-                $successFlag = $false
-            }
-        }
+        $netuserobject = net user $_
     }
     catch {
-        Submit-Log -text "Error inside the iteration of hash map netUserProperty_with_expectedvalue" -errorRecord $_
+        $logFilePath = $logFilePath = LogFileName -errorFilePath
+        Submit-Log -text "Error while excecuting net user. Possibly wrong username" -errorRecord $_
+        exit
     }
-}
+    Submit-Log -text "------------------------  OUTPUT  -------------------------------"
+    Submit-Log -text "Account Name : $($_)"
+    Submit-Log -text "----------------------"
+    <#
+    We iterate through the hashtable and find the key in the netuserobject and futher find the expected value.
+    This is then logged in to the verbose stream and log file.
+    #>
+    foreach ($key in $netUserProperty_with_expectedvalue.Keys) {
+        $netUserProperty_with_currentvalue = [PSCustomObject]@{}
+        try {
+            if ( $netuserobject | findstr /c:"$($key)") {
+                if ($netuserobject | findstr /c:"$($key)" | findstr /c:"$($netUserProperty_with_expectedvalue.$key)") {
+                    $netUserProperty_with_currentvalue = [PSCustomObject]@{
+                        "Property" = $key
+                        "Value" = $netUserProperty_with_expectedvalue.$key
+                        "Expected Value" = $netUserProperty_with_expectedvalue.$key
+                    }
+                    $netUserProperty_with_currentvalue_array += $netUserProperty_with_currentvalue
+                }
+                else {
+                    $netuserobject_indexvalue = $netuserobject | findstr /c:"$($key)"
+                    $netuserobject_indexvalue = $netuserobject_indexvalue -split "\s\s"
+                    $netUserProperty_with_currentvalue = [PSCustomObject]@{
+                        "Property" = $key
+                        "Value" = $netuserobject_indexvalue[-1]
+                        "Expected Value" = $netUserProperty_with_expectedvalue.$key
+                    }
+                    $netUserProperty_with_currentvalue_array += $netUserProperty_with_currentvalue
+                    $successFlag = $false
+                }
+            }
+        }
+        catch {
+            Submit-Log -text "Error inside the iteration of hash map netUserProperty_with_expectedvalue" -errorRecord $_
+        }
+    }
 
-Submit-Log -text "`n `n $($netUserProperty_with_currentvalue_array | Out-String)"
-Submit-Log -text "-------------------------------------------------------------------"
-Submit-Log -text "Iteration through the fixed hash map has ended."
+    Submit-Log -text "`n `n $($netUserProperty_with_currentvalue_array | Out-String)"
+    Submit-Log -text "----------------------------- END OUTPUT --------------------------------------"
+    Submit-Log -text "Iteration through the fixed hash map has ended."
+}
+# $netuserobject = net user $AccountName
+
+
+
 
 if (-not $successFlag) {
     Submit-Log -text "Success Flag Failed"
