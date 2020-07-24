@@ -3,8 +3,6 @@
     Script to compare given values of user account with the actual values as shown with the net user cmdlet.
 #>
 
-
-
 param (
     <#
     Non mandatory parameters
@@ -14,124 +12,6 @@ param (
     [Parameter(HelpMessage="Enter single word without quotes or a string with quotes.")]
     [string] $logFileNamePrefix="" #Default value is empty - prefix to the log file
 )
-
-<#
-Initialize the logfile name and have option to retrive errorfile path , errorfile name, successfile path and successfile name.
-Also verify if logFileNamePrefix is available or not.
-Handle other errors.
-#>
-function LogFileName {
-    [cmdletbinding()]
-    param (
-        [switch] $errorFilePath,
-        [switch] $successFilePath,
-        [switch] $successFileName,
-        [switch] $errorFileName
-    )
-    try {
-        Write-Verbose "LogFileName function started" -Verbose
-        <#
-        currentFolderPath - Name of the path where the executable reside relative to path of the console.
-        #>
-        $currentFolderPath = Split-Path $script:MyInvocation.MyCommand.Path
-        $currentFolderPath += '\'
-        <#
-        compname - Current local computer name where the script is executed.
-        #>
-        $compName = $env:COMPUTERNAME
-
-        if ($errorFilePath) {
-            if ((-not $logFileNamePrefix)) {
-                $outputFilename = "$($compName)_ERROR.txt"
-                $logFilePath = $currentFolderPath + $outputFilename
-                return $logFilePath
-            }
-            elseif (($logFileNamePrefix)) {
-                $outputFilename = "$($logFileNamePrefix)_$($compName)_ERROR.txt"
-                $logFilePath = $currentFolderPath + $outputFilename
-                return $logFilePath
-            }
-            else {
-                $outputFilename = "ERROR.txt"
-                $logFilePath = $currentFolderPath + $outputFilename
-                return $logFilePath
-            }
-        }
-        elseif ($successFilePath) {
-            if ((-not $logFileNamePrefix)) {
-                $outputFilename = "$($compName)_SUCCESS.txt"
-                $logFilePath = $currentFolderPath + $outputFilename
-                return $logFilePath
-            }
-            elseif (($logFileNamePrefix)) {
-                $outputFilename = "$($logFileNamePrefix)_$($compName)_SUCCESS.txt"
-                $logFilePath = $currentFolderPath + $outputFilename
-                return $logFilePath
-            }
-            else {
-                $outputFilename = "SUCCESS.txt"
-                $logFilePath = $currentFolderPath + $outputFilename
-                return $logFilePath
-            }
-        }
-        elseif ($errorFileName) {
-            if ((-not $logFileNamePrefix)) {
-                $outputFilename = "$($compName)_ERROR.txt"
-                $logFilePath = $currentFolderPath + $outputFilename
-                return $logFilePath
-            }
-            elseif (($logFileNamePrefix)) {
-                $outputFilename = "$($logFileNamePrefix)_$($compName)_ERROR.txt"
-                $logFilePath = $currentFolderPath + $outputFilename
-                return $logFilePath
-            }
-            else {
-                $outputFilename = "ERROR.txt"
-                return $outputFilename
-            }
-        }
-        elseif ($successFileName) {
-            if ((-not $logFileNamePrefix)) {
-                $outputFilename = "$($compName)_SUCCESS.txt"
-                $logFilePath = $currentFolderPath + $outputFilename
-                return $logFilePath
-            }
-            elseif (($logFileNamePrefix)) {
-                $outputFilename = "$($logFileNamePrefix)_$($compName)_SUCCESS.txt"
-                $logFilePath = $currentFolderPath + $outputFilename
-                return $logFilePath
-            }
-            else {
-                $outputFilename = "SUCCESS.txt"
-                return $outputFilename
-            }
-        }
-        elseif ((-not $logFileNamePrefix)) {
-                $outputFilename = "$($compName).txt"
-                $logFilePath = $currentFolderPath + $outputFilename
-                return $logFilePath
-        }
-        elseif (($logFileNamePrefix)) {
-            $outputFilename = "$($logFileNamePrefix)_$($compName).txt"
-            $logFilePath = $currentFolderPath + $outputFilename
-            return $logFilePath
-        }
-        else {
-            $logFilePath = ""
-            return $logFilePath
-        }
-    }
-    catch {
-        <#
-        Exeption Handling - Catch block for the function LogFileName
-        No need to check for existing filepath as this function is executed at the top.
-        #>
-        $logFilePath = LogFileName -errorFilePath
-        Submit-Log -text "New LogFilePath : $($logFilePath)"
-        Submit-Log -text "Error while Initializing logfilename" -errorRecord $_
-        exit
-    }
-}
 
 <#
 Log function to output to verbose stream as well as log into file
@@ -163,6 +43,127 @@ function Submit-Log {
 }
 
 <#
+Initialize the logfile name and have option to retrive errorfile path , errorfile name, successfile path and successfile name.
+Also verify if logFileNamePrefix is available or not.
+Handle other errors.
+#>
+function LogFileName {
+    [cmdletbinding()]
+    param (
+        [switch] $errorFlag,
+        [switch] $successFlag
+        )
+    try {
+        Write-Verbose "LogFileName function started" -Verbose
+        <#
+        currentFolderPath - Name of the path where the executable reside relative to path of the console.
+        #>
+        $currentFolderPath = Split-Path $script:MyInvocation.MyCommand.Path
+        $currentFolderPath += '\'
+        <#
+        compname - Current local computer name where the script is executed.
+        #>
+        $compName = $env:COMPUTERNAME
+
+        $fileNamePathObject = New-Object -TypeName psobject
+        if ($errorFlag) {
+            if ((-not $logFileNamePrefix)) {
+                $outputFilename = "$($compName)_ERROR.txt"
+                $logFilePath = $currentFolderPath + $outputFilename
+                $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Name -Value $outputFilename
+                $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Path -Value $logFilePath
+                return $fileNamePathObject
+            }
+            elseif (($logFileNamePrefix)) {
+                $outputFilename = "$($logFileNamePrefix)_$($compName)_ERROR.txt"
+                $logFilePath = $currentFolderPath + $outputFilename
+                $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Name -Value $outputFilename
+                $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Path -Value $logFilePath
+                return $fileNamePathObject
+            }
+            else {
+                $outputFilename = "ERROR.txt"
+                $logFilePath = $currentFolderPath + $outputFilename
+                $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Name -Value $outputFilename
+                $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Path -Value $logFilePath
+                return $fileNamePathObject
+            }
+        }
+        elseif ($successFlag) {
+            if ((-not $logFileNamePrefix)) {
+                $outputFilename = "$($compName)_SUCCESS.txt"
+                $logFilePath = $currentFolderPath + $outputFilename
+                $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Name -Value $outputFilename
+                $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Path -Value $logFilePath
+                return $fileNamePathObject
+            }
+            elseif (($logFileNamePrefix)) {
+                $outputFilename = "$($logFileNamePrefix)_$($compName)_SUCCESS.txt"
+                $logFilePath = $currentFolderPath + $outputFilename
+                $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Name -Value $outputFilename
+                $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Path -Value $logFilePath
+                return $fileNamePathObject            }
+            else {
+                $outputFilename = "SUCCESS.txt"
+                $logFilePath = $currentFolderPath + $outputFilename
+                $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Name -Value $outputFilename
+                $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Path -Value $logFilePath
+                return $fileNamePathObject            }
+        }
+        elseif ((-not $logFileNamePrefix)) {
+                $outputFilename = "$($compName).txt"
+                $logFilePath = $currentFolderPath + $outputFilename
+                return $logFilePath
+        }
+        elseif (($logFileNamePrefix)) {
+            $outputFilename = "$($logFileNamePrefix)_$($compName).txt"
+            $logFilePath = $currentFolderPath + $outputFilename
+            return $logFilePath
+        }
+        else {
+            $logFilePath = ""
+            return $logFilePath
+        }
+    }
+    catch {
+        <#
+        Exeption Handling - Catch block for the function LogFileName
+        No need to check for existing filepath as this function is executed at the top.
+        #>
+        $fileObject = logFileName  -errorFlag
+        $logFilePath = $fileObject.Path
+        Submit-Log -text "New LogFilePath : $($logFilePath)"
+        Submit-Log -text "Error while Initializing logfilename" -errorRecord $_
+        exit
+    }
+}
+
+
+<#
+Submit-Error Function aggregates the step when an error is encountered.
+#>
+function Submit-Error {
+    [CmdletBinding()]
+    param (
+        [Parameter()]
+        [String] $text
+    )
+    if ($logFilePath) {
+        $fileObject = logFileName  -errorFlag
+        Rename-Item -Path "$($logFilePath)" -NewName "$($fileObject.Name)" -Force
+    }
+    <#
+    Change the logFilePath even if the logFilePath is empty or not and hence no else statement.
+    #>
+    $fileObject = logFileName  -errorFlag
+    $script:logFilePath = $fileObject.Path
+    if ($text) {
+        Submit-Log -text "$($text)"
+    }
+    Submit-Log -text "New LogFilePath : $($logFilePath)"
+}
+
+<#
 The purpose of this function is to validate the parameters.
 Here we check if the AccountName array is empty or not.
 #>
@@ -174,28 +175,15 @@ function ParameterValidation {
     Submit-Log -text "ParameterValidation Function started"
     try {
         if (-Not $AccountName) {
-            if ($logFilePath) {
-                $fileName = logFileName  -errorFileName
-                Rename-Item -Path "$($logFilePath)" -NewName "$($fileName)" -Force
-            }
-            $logFilePath = LogFileName -errorFilePath
-            Submit-Log -text "New LogFilePath : $($logFilePath)"
             Submit-Log -text "Account Name Array is Empty"
+            Submit-Error
             exit
         }
         Submit-Log -text "ParameterValidation Function ended"
     }
     catch {
-        if ($logFilePath) {
-            $fileName = logFileName  -errorFileName
-            Rename-Item -Path "$($logFilePath)" -NewName "$($fileName)" -Force
-        }
-        <#
-        Change the logFilePath even if the logFilePath is empty or not and hence no else statement.
-        #>
-        $logFilePath = LogFileName -errorFilePath
-        Submit-Log -text "New LogFilePath : $($logFilePath)"
         Submit-Log -text "Error while excecuting within ParameterValidation Function" -errorRecord $_
+        Submit-Error
         exit
     }
 }
@@ -222,17 +210,16 @@ Write-Verbose "File Name Prefix: $($logFileNamePrefix)" -Verbose
 $logFilePath = LogFileName
 Write-Verbose "Prevalidated Log File Path: $($logFilePath)" -verbose
 
+<#
+Cannot execute this if statement within logFileName as Submit-Log is below logFileName and cannot be called within it.
+#>
 if (-not $logFilePath) {
-    <#
-    No need to check for existing filepath as logFileName function is executed at the top.
-    #>
-    $logFilePath = LogFileName -errorFilePath
+    Submit-Error
     Submit-Log -text "Log File Path is empty"
-    Submit-Log -text "New LogFilePath : $($logFilePath)"
     exit
 }
 
-Submit-Log -text "`n`n Start of program - LogFilePath initialized"
+Submit-Log -text "Start of program - LogFilePath initialized"
 Submit-Log -text "New LogFilePath : $($logFilePath)"
 
 <#
@@ -243,16 +230,8 @@ try {
     Submit-Log -text "AccountName array Not empty"
 }
 catch {
-    if ($logFilePath) {
-        $fileName = logFileName  -errorFileName
-        Rename-Item -Path "$($logFilePath)" -NewName "$($fileName)" -Force
-    }
-    <#
-    Change the logFilePath even if the logFilePath is empty or not and hence no else statement.
-    #>
-    $logFilePath = LogFileName -errorFilePath
-    Submit-Log -text "New LogFilePath : $($logFilePath)"
     Submit-Log -text "Error while calling ParameterValidation Function" -errorRecord $_
+    Submit-Error
     exit
 }
 
@@ -270,16 +249,8 @@ $AccountName | ForEach-Object{
         $netuserobject = net user $_ 2>&1
     }
     catch {
-        if ($logFilePath) {
-            $fileName = logFileName  -errorFileName
-            Rename-Item -Path "$($logFilePath)" -NewName "$($fileName)" -Force
-        }
-        <#
-        Change the logFilePath even if the logFilePath is empty or not and hence no else statement.
-        #>
-        $logFilePath = LogFileName -errorFilePath
-        Submit-Log -text "New LogFilePath : $($logFilePath)"
         Submit-Log -text "Error while excecuting net user. Possibly wrong username" -errorRecord $_
+        Submit-Error
         exit
     }
     Submit-Log -text "------------------------  OUTPUT  $(([array]::indexof($AccountName,$_))+1) ------------------------------------"
@@ -292,7 +263,9 @@ $AccountName | ForEach-Object{
     foreach ($key in $netUserProperty_with_expectedvalue.Keys) {
         $netUserProperty_with_currentvalue = [PSCustomObject]@{}
         try {
+            # Find the array index which contains the key.
             if ( $netuserobject | findstr /c:"$($key)") {
+                # After finding the key now find the if the array value has the value of the key's value
                 if ($netuserobject | findstr /c:"$($key)" | findstr /c:"$($netUserProperty_with_expectedvalue.$key)") {
                     $netUserProperty_with_currentvalue = [PSCustomObject]@{
                         "Property" = $key
@@ -316,9 +289,11 @@ $AccountName | ForEach-Object{
         }
         catch {
             Submit-Log -text "Error inside the iteration of hash map netUserProperty_with_expectedvalue" -errorRecord $_
+            Submit-Error
+            exit
         }
     }
-
+    # Out-String is used to convert to string as write-verbose only accepts strings.
     Submit-Log -text "`n `n $($netUserProperty_with_currentvalue_array | Out-String)"
     Submit-Log -text "----------------------------- END OUTPUT -------------------------------"
     Submit-Log -text "Iteration through the fixed hash map has ended."
@@ -326,17 +301,14 @@ $AccountName | ForEach-Object{
 
 if (-not $successFlag) {
     Submit-Log -text "Success Flag Failed"
-    $fileName = logFileName  -errorFileName
-    Rename-Item -Path "$($logFilePath)" -NewName "$($fileName)" -Force
-    $logFilePath = LogFileName  -errorFilePath
-    Submit-Log -text "New LogFilePath : $($logFilePath)"
+    Submit-Error
 }
 else {
     Submit-Log -text "Success Flag remains as default value: True"
-    $fileName = logFileName -successFileName
+    $fileObject = LogFileName -successFlag
+    $fileName = $fileObject.Name
     Rename-Item -Path "$($logFilePath)" -NewName "$($fileName)" -Force
-    $logFilePath = LogFileName -successFilePath
+    $logFilePath = $fileObject.Path
     Submit-Log -text "New LogFilePath : $($logFilePath)"
 }
-
 Submit-Log -text "End of program"
