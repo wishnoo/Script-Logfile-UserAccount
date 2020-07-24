@@ -1,0 +1,25 @@
+﻿7/24/2020 15:15:42 - Start of program - LogFilePath initialized
+7/24/2020 15:15:42 - New LogFilePath : C:\Users\STEALTH\Documents\Scripts\Script-Logfile-UserAccount\STEALTH.txt
+7/24/2020 15:15:42 - ParameterValidation Function started
+7/24/2020 15:15:42 - ParameterValidation Function ended
+7/24/2020 15:15:42 - AccountName array Not empty
+7/24/2020 15:15:42 - Executing net user
+7/24/2020 15:15:42 - ------------------------  OUTPUT  1 ------------------------------------
+7/24/2020 15:15:42 - Account Name : stealth
+7/24/2020 15:15:42 - ----------------------------
+7/24/2020 15:15:42 - 
+ 
+ 
+Property                 Value Expected Value
+--------                 ----- --------------
+Account active           Yes   Yes           
+Password expires         Never Never         
+User may change password Yes   Yes           
+
+
+
+7/24/2020 15:15:42 - ----------------------------- END OUTPUT -------------------------------
+7/24/2020 15:15:42 - Iteration through the fixed hash map has ended.
+7/24/2020 15:15:42 - Success Flag remains as default value: True
+7/24/2020 15:15:42 - New LogFilePath : C:\Users\STEALTH\Documents\Scripts\Script-Logfile-UserAccount\STEALTH_SUCCESS.txt
+7/24/2020 15:15:42 - End of program

@@ -206,6 +206,16 @@ Flag to determine if the netUserProperty_with_expectedvalue values match with th
 #>
 $successFlag = $true
 
+<#
+Delete any text files in the current folder
+#>
+$currentFolderPath = Split-Path $script:MyInvocation.MyCommand.Path
+$currentFolderPath += '\'
+
+if (Get-ChildItem -Path $currentFolderPath*.txt) {
+    remove-item $currentFolderPath*.txt
+}
+
 Write-Verbose "File Name Prefix: $($logFileNamePrefix)" -Verbose
 $logFilePath = LogFileName
 Write-Verbose "Prevalidated Log File Path: $($logFilePath)" -verbose
