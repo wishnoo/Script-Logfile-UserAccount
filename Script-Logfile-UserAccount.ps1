@@ -1,8 +1,12 @@
 <#
 .SYNOPSIS
-    Script to compare given values of user account with the actual values as shown with the net user cmdlet.
+Script to compare given values of user account with the actual values as shown with the net user cmdlet.
+.DESCRIPTION
+Run net user on the current machine with values provided by the user.
+Compare the values with the expected values.
+Log the results.
+Rename the file with computer name, prefix (optional), and status (Success or error).
 #>
-
 param (
     <#
     Non mandatory parameters
@@ -10,8 +14,43 @@ param (
     [Parameter(HelpMessage="Enter one or more account names separated by commas.")] <# HelpMessage has no effect on non mandatory parameters #>
     [array] $AccountName=@(),
     [Parameter(HelpMessage="Enter single word without quotes or a string with quotes.")]
-    [string] $logFileNamePrefix="" #Default value is empty - prefix to the log file
+    [string] $logFileNamePrefix="UserAccount" #Default value is empty - prefix to the log file
 )
+
+<#
+Set all non terminating errors to terminating.
+#>
+$ErrorActionPreference = 'Stop'
+
+<#
+netUserProperty_with_expectedvalue is a hashtable to store the netuser properties that need to be verified as the key and desired values as the values in the hashtable.
+#>
+$netUserProperty_with_expectedvalue = @{'Account active' = 'Yes'
+                            'Password expires' = 'Never'
+                            'User may change password' = 'Yes'
+}
+
+<#
+Flag to determine if the netUserProperty_with_expectedvalue values match with the actual netuser values. Used in the foreach-object while looping through the netUserProperty_with_expectedvalue hash table.
+#>
+$successFlag = $true
+
+<#
+Delete any text files in the current folder
+#>
+if (Get-ChildItem -Path $currentFolderPath*.txt) {
+    remove-item $currentFolderPath*.txt
+}
+
+<#
+currentFolderPath - Name of the path where the executable reside relative to path of the console.
+#>
+$currentFolderPath = Split-Path $script:MyInvocation.MyCommand.Path
+$currentFolderPath += '\'
+<#
+compname - Current local computer name where the script is executed.
+#>
+$compName = $env:COMPUTERNAME
 
 <#
 Log function to output to verbose stream as well as log into file
@@ -26,8 +65,16 @@ function Submit-Log {
     # Prepend time with text using get-date and .tostring method
     $Entry = (Get-Date).ToString( 'M/d/yyyy HH:mm:ss - ' ) + $text
 
-    #  Write entry to log file
-    $Entry | Out-File -FilePath $logFilePath -Encoding UTF8 -Append
+    try {
+        #  Write entry to log file
+        $Entry | Out-File -FilePath $logFilePath -Encoding UTF8 -Append
+    }
+    catch {
+        $outputFilename = "$($compName)_ERROR.txt"
+        $script:logFilePath = $currentFolderPath + $outputFilename
+        Submit-Log -text "Error - Output to File Error. Possible Error in creation of file."
+        exit
+    }
 
     #  Write entry to screen
     Write-Verbose -Message $Entry -Verbose
@@ -55,15 +102,6 @@ function LogFileName {
         )
     try {
         Write-Verbose "LogFileName function started" -Verbose
-        <#
-        currentFolderPath - Name of the path where the executable reside relative to path of the console.
-        #>
-        $currentFolderPath = Split-Path $script:MyInvocation.MyCommand.Path
-        $currentFolderPath += '\'
-        <#
-        compname - Current local computer name where the script is executed.
-        #>
-        $compName = $env:COMPUTERNAME
 
         $fileNamePathObject = New-Object -TypeName psobject
         if ($errorFlag) {
@@ -74,15 +112,8 @@ function LogFileName {
                 $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Path -Value $logFilePath
                 return $fileNamePathObject
             }
-            elseif (($logFileNamePrefix)) {
-                $outputFilename = "$($logFileNamePrefix)_$($compName)_ERROR.txt"
-                $logFilePath = $currentFolderPath + $outputFilename
-                $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Name -Value $outputFilename
-                $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Path -Value $logFilePath
-                return $fileNamePathObject
-            }
             else {
-                $outputFilename = "ERROR.txt"
+                $outputFilename = "$($logFileNamePrefix)_$($compName)_ERROR.txt"
                 $logFilePath = $currentFolderPath + $outputFilename
                 $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Name -Value $outputFilename
                 $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Path -Value $logFilePath
@@ -97,14 +128,8 @@ function LogFileName {
                 $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Path -Value $logFilePath
                 return $fileNamePathObject
             }
-            elseif (($logFileNamePrefix)) {
-                $outputFilename = "$($logFileNamePrefix)_$($compName)_SUCCESS.txt"
-                $logFilePath = $currentFolderPath + $outputFilename
-                $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Name -Value $outputFilename
-                $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Path -Value $logFilePath
-                return $fileNamePathObject            }
             else {
-                $outputFilename = "SUCCESS.txt"
+                $outputFilename = "$($logFileNamePrefix)_$($compName)_SUCCESS.txt"
                 $logFilePath = $currentFolderPath + $outputFilename
                 $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Name -Value $outputFilename
                 $fileNamePathObject | Add-Member -MemberType NoteProperty -Name Path -Value $logFilePath
@@ -186,34 +211,6 @@ function ParameterValidation {
         Submit-Error
         exit
     }
-}
-
-<#
-Set all non terminating errors to terminating.
-#>
-$ErrorActionPreference = 'Stop'
-
-<#
-netUserProperty_with_expectedvalue is a hashtable to store the netuser properties that need to be verified as the key and desired values as the values in the hashtable.
-#>
-$netUserProperty_with_expectedvalue = @{'Account active' = 'Yes'
-                            'Password expires' = 'Never'
-                            'User may change password' = 'Yes'
-}
-
-<#
-Flag to determine if the netUserProperty_with_expectedvalue values match with the actual netuser values. Used in the foreach-object while looping through the netUserProperty_with_expectedvalue hash table.
-#>
-$successFlag = $true
-
-<#
-Delete any text files in the current folder
-#>
-$currentFolderPath = Split-Path $script:MyInvocation.MyCommand.Path
-$currentFolderPath += '\'
-
-if (Get-ChildItem -Path $currentFolderPath*.txt) {
-    remove-item $currentFolderPath*.txt
 }
 
 Write-Verbose "File Name Prefix: $($logFileNamePrefix)" -Verbose
